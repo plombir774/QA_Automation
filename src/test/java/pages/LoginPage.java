@@ -3,6 +3,7 @@ package pages;
 import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.SelenideElement;
 
+import static com.codeborne.selenide.Condition.exactText;
 import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.$;
 
@@ -19,9 +20,18 @@ public class LoginPage {
     }
 
     public InventoryPage loginAs(String username, String password) {
+        submitCredentials(username, password);
+        return new InventoryPage();
+    }
+
+    public void submitCredentials(String username, String password) {
         usernameInput.setValue(username);
         passwordInput.setValue(password);
         loginButton.click();
-        return new InventoryPage();
+    }
+
+    public void shouldHaveError(String message) {
+        $("[data-test='error']").shouldBe(visible).shouldHave(exactText(message));
+        loginButton.shouldBe(visible);
     }
 }
