@@ -1,9 +1,12 @@
 # QA Automation Portfolio
 
 A small Java 17 project demonstrating UI and REST API test automation with TestNG.
-The initial suite contains two independent smoke tests:
+The suite contains five independent smoke tests:
 
-- **SauceDemo UI:** log in as the public `standard_user` and verify that the product catalog is displayed and contains products.
+- **Successful login:** log in as `standard_user` and verify the inventory URL and product catalog.
+- **Negative login:** attempt login as `locked_out_user` and verify the exact error message while the login form remains visible.
+- **Add product to cart:** add one Sauce Labs Backpack, verify the cart badge is `1`, and check the product name and quantity in the cart.
+- **Complete checkout:** add one Sauce Labs Backpack, enter `Nikita`, `Test`, and postal code `6000`, verify the order overview, finish checkout, and check the success confirmation.
 - **Restful Booker API:** create a booking, check HTTP 200 and JSON content type, and verify the generated ID and every returned booking field.
 
 ## Stack
@@ -46,7 +49,7 @@ In an IDE, import the project as Maven, select JDK 17, and enable annotation pro
 
 ## Run tests
 
-From the repository root, run both smoke tests:
+From the repository root, run all smoke tests:
 
 ```shell
 mvn test
@@ -54,6 +57,7 @@ mvn test
 
 Chrome runs headless by default. Selenide/Selenium Manager resolves the browser driver automatically.
 Each UI test closes its browser in an `alwaysRun` teardown, including after failures.
+The next test starts a fresh browser session with its own login and cart state.
 
 Run one group or one class:
 
@@ -143,7 +147,11 @@ Use `mvn clean test` when you want reports containing only the latest run.
     |   |   `-- RestfulBookerSmokeTest.java
     |   |-- pages/
     |   |   |-- LoginPage.java
-    |   |   `-- InventoryPage.java
+    |   |   |-- InventoryPage.java
+    |   |   |-- CartPage.java
+    |   |   |-- CheckoutPage.java
+    |   |   |-- CheckoutOverviewPage.java
+    |   |   `-- CheckoutCompletePage.java
     |   |-- models/
     |   |   |-- Booking.java
     |   |   |-- BookingDates.java
@@ -161,10 +169,14 @@ Use `mvn clean test` when you want reports containing only the latest run.
 | --- | --- |
 | `pom.xml` | Java 17 compilation, dependencies, Lombok annotation processing, Surefire test runner, and Allure report plugin |
 | `.gitignore` | Excludes build output, reports, IDE files, and local environment files |
-| `SauceDemoSmokeTest.java` | UI login scenario and browser setup/teardown |
+| `SauceDemoSmokeTest.java` | Four independent UI scenarios, shared flow helpers, and browser setup/teardown |
 | `RestfulBookerSmokeTest.java` | Booking creation request and assertions |
-| `LoginPage.java` | Login form locators and interactions |
-| `InventoryPage.java` | Checks that the product catalog is loaded |
+| `LoginPage.java` | Login form interactions and error assertions |
+| `InventoryPage.java` | Inventory assertions, product selection, cart badge checks, and cart navigation |
+| `CartPage.java` | Selected product and quantity assertions, plus navigation to checkout |
+| `CheckoutPage.java` | Customer information form and navigation to the overview |
+| `CheckoutOverviewPage.java` | Order contents and the Finish action |
+| `CheckoutCompletePage.java` | Successful order confirmation |
 | `Booking.java` | Booking request and returned booking details |
 | `BookingDates.java` | Check-in/check-out dates in the API's ISO date format |
 | `BookingResponse.java` | Creation response containing the generated ID and booking |
@@ -175,6 +187,12 @@ Use `mvn clean test` when you want reports containing only the latest run.
 
 The design uses small page objects and direct API requests. Add a new `*Test.java`
 class in `ui` or `api` to extend the suite; Maven discovers it automatically.
+
+UI selectors stay inside page objects and use SauceDemo's `data-test` attributes.
+Page methods describe actions or assertions; navigation methods return the next page object.
+Selenide assertions wait automatically, so no fixed sleeps are needed.
+Small private helpers in the UI test class reuse login and cart navigation, while every test
+prepares its own state. There are no test dependencies, base page classes, or shared browser sessions.
 
 ## References
 
