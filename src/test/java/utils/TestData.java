@@ -23,4 +23,17 @@ public final class TestData {
                 .additionalNeeds("Breakfast")
                 .build();
     }
+
+    public static Booking updatedBooking() {
+        LocalDate checkIn = LocalDate.now(ZoneOffset.UTC).plusDays(14);
+
+        return Booking.builder()
+                .firstName("Nikita")
+                .lastName("UpdatedTest")
+                .totalPrice(275)
+                .depositPaid(false)
+                .bookingDates(new BookingDates(checkIn.toString(), checkIn.plusDays(4).toString()))
+                .additionalNeeds("Dinner")
+                .build();
+    }
 }
