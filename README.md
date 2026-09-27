@@ -1,13 +1,16 @@
 # QA Automation Portfolio
 
 A small Java 17 project demonstrating UI and REST API test automation with TestNG.
-The suite contains five independent smoke tests:
+The suite contains eight independent smoke tests: four UI scenarios and four API scenarios.
 
 - **Successful login:** log in as `standard_user` and verify the inventory URL and product catalog.
 - **Negative login:** attempt login as `locked_out_user` and verify the exact error message while the login form remains visible.
 - **Add product to cart:** add one Sauce Labs Backpack, verify the cart badge is `1`, and check the product name and quantity in the cart.
 - **Complete checkout:** add one Sauce Labs Backpack, enter `Nikita`, `Test`, and postal code `6000`, verify the order overview, finish checkout, and check the success confirmation.
-- **Restful Booker API:** create a booking, check HTTP 200 and JSON content type, and verify the generated ID and every returned booking field.
+- **Create booking:** check HTTP 200 and JSON content type, then verify the generated ID and every returned booking field.
+- **Get booking:** create a booking, retrieve it by its generated ID, and compare every returned field with the original request.
+- **Update booking:** create a booking, authenticate, update every field, and check both the PUT response and a subsequent GET of the same ID.
+- **Delete booking:** create a booking, authenticate, verify the DELETE response, and check that a subsequent GET returns HTTP 404 and `Not Found`.
 
 ## Stack
 
@@ -95,9 +98,18 @@ JSON headers, Jackson mapping, and request/response logging when REST Assured va
 Tests run sequentially by default, and UI and API tests have no dependency on each other.
 
 These tests exercise public demo services, so availability and network access affect results.
-The API test creates one demo booking per run and validates its creation response. It does not depend on an existing booking ID.
-It leaves the demo record for the service's automatic reset; [Restful Booker resets its data every 10 minutes](https://restful-booker.herokuapp.com/).
+Each API test creates its own booking and keeps the generated ID and any authentication token local to that test.
+There are no fixed booking IDs or dependencies between tests. The delete scenario removes its booking;
+the create, get, and update scenarios leave their demo records for the service's automatic reset.
+[Restful Booker resets its data every 10 minutes](https://restful-booker.herokuapp.com/).
 The SauceDemo credentials are public sample credentials displayed by the demo site.
+
+Update and delete obtain a token from `POST /auth` using Restful Booker's public demo credentials
+(`admin` / `password123`), then send it as a `token` cookie. The authentication response must be JSON
+with HTTP 200 and a non-blank token. Request and response attachments include this public demo data.
+
+Restful Booker's successful DELETE response is HTTP **201** with a plain-text `Created` body.
+The delete test also verifies the subsequent GET response: HTTP **404**, plain text, and `Not Found`.
 
 ## Allure reports
 
@@ -144,6 +156,9 @@ Use `mvn clean test` when you want reports containing only the latest run.
     |   |-- ui/
     |   |   `-- SauceDemoSmokeTest.java
     |   |-- api/
+    |   |   |-- client/
+    |   |   |   |-- BookingApiClient.java
+    |   |   |   `-- AuthApiClient.java
     |   |   `-- RestfulBookerSmokeTest.java
     |   |-- pages/
     |   |   |-- LoginPage.java
@@ -153,6 +168,8 @@ Use `mvn clean test` when you want reports containing only the latest run.
     |   |   |-- CheckoutOverviewPage.java
     |   |   `-- CheckoutCompletePage.java
     |   |-- models/
+    |   |   |-- AuthRequest.java
+    |   |   |-- AuthResponse.java
     |   |   |-- Booking.java
     |   |   |-- BookingDates.java
     |   |   `-- BookingResponse.java
@@ -170,7 +187,9 @@ Use `mvn clean test` when you want reports containing only the latest run.
 | `pom.xml` | Java 17 compilation, dependencies, Lombok annotation processing, Surefire test runner, and Allure report plugin |
 | `.gitignore` | Excludes build output, reports, IDE files, and local environment files |
 | `SauceDemoSmokeTest.java` | Four independent UI scenarios, shared flow helpers, and browser setup/teardown |
-| `RestfulBookerSmokeTest.java` | Booking creation request and assertions |
+| `RestfulBookerSmokeTest.java` | Four independent CRUD scenarios, response assertions, and readable Allure steps |
+| `BookingApiClient.java` | Executes create, get, update, and delete requests and returns REST Assured responses |
+| `AuthApiClient.java` | Calls the auth endpoint to obtain a token |
 | `LoginPage.java` | Login form interactions and error assertions |
 | `InventoryPage.java` | Inventory assertions, product selection, cart badge checks, and cart navigation |
 | `CartPage.java` | Selected product and quantity assertions, plus navigation to checkout |
@@ -180,13 +199,21 @@ Use `mvn clean test` when you want reports containing only the latest run.
 | `Booking.java` | Booking request and returned booking details |
 | `BookingDates.java` | Check-in/check-out dates in the API's ISO date format |
 | `BookingResponse.java` | Creation response containing the generated ID and booking |
+| `AuthRequest.java` | Authentication username and password |
+| `AuthResponse.java` | Authentication token returned by the API |
 | `UiConfig.java` | Selenide settings and Allure UI listener |
 | `ApiConfig.java` | Fresh REST Assured request specification with JSON mapping and reporting |
-| `TestData.java` | Creates a fresh sample booking with future dates |
+| `TestData.java` | Creates fresh original and updated booking data with future dates |
 | `allure.properties` | Stores Allure results under Maven's `target` directory |
 
-The design uses small page objects and direct API requests. Add a new `*Test.java`
+The design uses small page objects and API clients. Add a new `*Test.java`
 class in `ui` or `api` to extend the suite; Maven discovers it automatically.
+
+API clients own request execution and reuse `ApiConfig` for a fresh request specification on every call.
+They return raw REST Assured responses so tests can validate both successful and unsuccessful responses.
+Tests own the scenarios, JSON-to-model mapping, and assertions. Lombok-generated equality compares all
+booking fields, including nested dates; the update fixture changes every field to catch partial updates.
+The clients do not cache IDs, tokens, or mutable request specifications, and need no abstract base class.
 
 UI selectors stay inside page objects and use SauceDemo's `data-test` attributes.
 Page methods describe actions or assertions; navigation methods return the next page object.
