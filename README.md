@@ -80,6 +80,19 @@ mvn test "-Dgroups=ui" "-Dselenide.browser=edge"
 
 Quotes around `-D` arguments also make these commands safe to copy into PowerShell.
 
+## Continuous integration
+
+The [QA Automation Tests workflow](.github/workflows/tests.yml) runs automatically on pull requests
+targeting `main` and pushes to `main`. It also supports manual runs from the GitHub Actions tab.
+It uses `ubuntu-latest`, Temurin Java 17, Maven dependency caching, and `mvn --batch-mode clean test`.
+Chrome runs headless using the existing test configuration. No repository secrets are required.
+
+The job has a 15-minute timeout; the test step has a 10-minute timeout to leave time for report uploads.
+On failure, open the run in GitHub's **Actions** tab and download **test-reports** from **Artifacts**.
+The artifact contains available Surefire reports, Allure results, and Selenide failure screenshots/page
+sources from `target/surefire-reports`, `target/allure-results`, and `target/selenide-reports`.
+Artifacts are retained for 7 days. Uploading reports does not turn a failed test run into a successful run.
+
 ## Configuration
 
 | System property | Default | Purpose |
@@ -151,6 +164,9 @@ Use `mvn clean test` when you want reports containing only the latest run.
 |-- pom.xml
 |-- .gitignore
 |-- README.md
+|-- .github/
+|   `-- workflows/
+|       `-- tests.yml
 `-- src/test/
     |-- java/
     |   |-- ui/
@@ -186,6 +202,7 @@ Use `mvn clean test` when you want reports containing only the latest run.
 | --- | --- |
 | `pom.xml` | Java 17 compilation, dependencies, Lombok annotation processing, Surefire test runner, and Allure report plugin |
 | `.gitignore` | Excludes build output, reports, IDE files, and local environment files |
+| `.github/workflows/tests.yml` | Runs the test suite in GitHub Actions and uploads reports after failures |
 | `SauceDemoSmokeTest.java` | Four independent UI scenarios, shared flow helpers, and browser setup/teardown |
 | `RestfulBookerSmokeTest.java` | Four independent CRUD scenarios, response assertions, and readable Allure steps |
 | `BookingApiClient.java` | Executes create, get, update, and delete requests and returns REST Assured responses |
