@@ -1,248 +1,163 @@
 # QA Automation Portfolio
 
-A small Java 17 project demonstrating UI and REST API test automation with TestNG.
-The suite contains eight independent smoke tests: four UI scenarios and four API scenarios.
+[![Java 17](https://img.shields.io/badge/Java-17-ED8B00)](https://adoptium.net/temurin/releases/?version=17)
+[![Maven](https://img.shields.io/badge/Build-Maven-C71A36)](https://maven.apache.org/)
+[![QA Automation Tests](https://github.com/plombir774/QA_Automation/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/plombir774/QA_Automation/actions/workflows/tests.yml)
 
-- **Successful login:** log in as `standard_user` and verify the inventory URL and product catalog.
-- **Negative login:** attempt login as `locked_out_user` and verify the exact error message while the login form remains visible.
-- **Add product to cart:** add one Sauce Labs Backpack, verify the cart badge is `1`, and check the product name and quantity in the cart.
-- **Complete checkout:** add one Sauce Labs Backpack, enter `Nikita`, `Test`, and postal code `6000`, verify the order overview, finish checkout, and check the success confirmation.
-- **Create booking:** check HTTP 200 and JSON content type, then verify the generated ID and every returned booking field.
-- **Get booking:** create a booking, retrieve it by its generated ID, and compare every returned field with the original request.
-- **Update booking:** create a booking, authenticate, update every field, and check both the PUT response and a subsequent GET of the same ID.
-- **Delete booking:** create a booking, authenticate, verify the DELETE response, and check that a subsequent GET returns HTTP 404 and `Not Found`.
+A Java 17 QA automation portfolio combining browser testing and REST API testing.
+Eight automated TestNG scenarios cover shopping workflows in [SauceDemo](https://www.saucedemo.com/)
+and booking CRUD operations in [Restful Booker](https://restful-booker.herokuapp.com/).
+The project demonstrates test design, reusable automation code, CI execution, and failure diagnostics using public demo services.
 
-## Stack
+## What this project demonstrates
 
-| Tool | Purpose |
+- Page Objects with stable `data-test` selectors and Selenide automatic waits.
+- API clients, token authentication, and typed request/response models.
+- Assertions on UI behavior, HTTP status, content type, and complete booking data.
+- Independent tests with fresh browser sessions and test-owned booking IDs.
+- GitHub Actions CI and Allure steps, HTTP attachments, and UI failure evidence.
+
+## Allure report
+
+![Allure report overview](docs/images/allure-overview.png)
+
+The report shows successful UI and API automated test execution with Allure steps and attachments.
+
+## Tech stack
+
+| Technology | Purpose |
 | --- | --- |
-| Java 17 and Maven | Compilation, dependency management, and test execution |
-| TestNG | Test lifecycle, assertions, and `ui`, `api`, and `smoke` groups |
-| Selenide | Browser automation, automatic waits, and browser driver management |
+| Java 17 / Maven | Language, dependencies, and build lifecycle |
+| TestNG | Test execution, lifecycle, groups, and assertions |
+| Selenide | Browser automation and automatic waits |
 | REST Assured | HTTP requests and response validation |
-| Allure | Test reports, UI steps, failure screenshots, and HTTP attachments |
-| Lombok | Model getters, setters, constructors, builders, and equality |
-| Jackson | Convert Java models to and from JSON |
+| Jackson / Lombok | JSON mapping and concise Java models |
+| Allure | Test reports, steps, and attachments |
+| GitHub Actions | Automated test runs and failure artifacts |
 
-Dependency and plugin versions are pinned in `pom.xml`. All automation code and its dependencies use Maven's test scope.
+## UI test coverage
 
-## Prerequisites
+[UI scenarios](src/test/java/ui/SauceDemoSmokeTest.java) run in headless Chrome by default.
 
-- JDK 17, with `JAVA_HOME` pointing to that JDK.
-- Maven 3.9 or newer on `PATH`.
-- Google Chrome installed for the default UI run.
-- Internet access to Maven Central, browser driver downloads, SauceDemo, and Restful Booker.
+| Scenario | Verification |
+| --- | --- |
+| Successful login | `standard_user` reaches the inventory URL and product catalog |
+| Locked-out login | `locked_out_user` receives the exact error message and stays on the login form |
+| Add to cart | Badge shows `1`; the cart contains the selected Sauce Labs Backpack with quantity `1` |
+| Complete checkout | Submit `Nikita`, `Test`, `6000`; verify the order overview and successful order confirmation |
 
-Check **both** commands: Maven can use a different Java installation from the one on `PATH`.
+## API test coverage
+
+Each [API scenario](src/test/java/api/RestfulBookerSmokeTest.java) creates its own booking.
+Update and delete obtain a token from `POST /auth` and send it as a cookie.
+
+| Scenario | Verification |
+| --- | --- |
+| Create | HTTP 200, JSON content type, positive booking ID, and all returned fields |
+| Get | HTTP 200, JSON content type, and stored data matching the creation request |
+| Update | HTTP 200 and all changed fields in both the PUT response and a subsequent GET |
+| Delete | HTTP 201 with `Created`, followed by HTTP 404 with `Not Found`; both responses are plain text |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Tests["TestNG scenarios"] --> UI["Page Objects + Selenide"]
+    Tests --> API["API clients + REST Assured"]
+    UI --> SauceDemo["SauceDemo"]
+    API --> Booker["Restful Booker"]
+    Tests --> Allure["Allure steps and results"]
+```
+
+Tests describe scenarios and expected behavior. Page Objects own UI selectors, actions, and page assertions;
+API clients execute requests and return responses for the tests to validate.
+Configuration, Java models, and reusable test data support both automation layers.
+
+## Project structure
+
+```text
+.github/workflows/tests.yml       # CI workflow
+pom.xml                          # Dependencies and Maven plugins
+src/test/
+|-- java/
+|   |-- ui/                      # SauceDemo scenarios
+|   |-- pages/                   # Login, inventory, cart, and checkout pages
+|   |-- api/
+|   |   |-- client/              # BookingApiClient and AuthApiClient
+|   |   `-- RestfulBookerSmokeTest.java
+|   |-- models/                  # Booking and authentication payloads
+|   |-- config/                  # Selenide and REST Assured settings
+|   `-- utils/                   # TestData factories
+`-- resources/allure.properties  # Allure results location
+```
+
+## Run locally
+
+Install **JDK 17**, **Maven 3.9+**, and **Google Chrome**. Internet access is required for dependencies,
+browser driver downloads, and the demo services. Set `JAVA_HOME` to JDK 17;
+both version commands below should report Java 17.
 
 ```shell
+git clone https://github.com/plombir774/QA_Automation.git
+cd QA_Automation
 java -version
 mvn -version
+mvn clean test
 ```
 
-Both should report Java 17. To select an installed JDK for the current PowerShell session:
-
-```powershell
-$env:JAVA_HOME = 'C:\path\to\your\jdk-17'
-$env:Path = "$env:JAVA_HOME\bin;$env:Path"
-mvn -version
-```
-
-In an IDE, import the project as Maven, select JDK 17, and enable annotation processing for Lombok if the IDE requires it.
-
-## Run tests
-
-From the repository root, run all smoke tests:
-
-```shell
-mvn test
-```
-
-Chrome runs headless by default. Selenide/Selenium Manager resolves the browser driver automatically.
-Each UI test closes its browser in an `alwaysRun` teardown, including after failures.
-The next test starts a fresh browser session with its own login and cart state.
-
-Run one group or one class:
+Run one group or show the browser:
 
 ```shell
 mvn test "-Dgroups=ui"
 mvn test "-Dgroups=api"
-mvn test "-Dtest=SauceDemoSmokeTest"
-mvn test "-Dtest=RestfulBookerSmokeTest"
-```
-
-Show the browser, or use an installed Microsoft Edge:
-
-```shell
 mvn test "-Dgroups=ui" "-Dselenide.headless=false"
-mvn test "-Dgroups=ui" "-Dselenide.browser=edge"
 ```
 
-Quotes around `-D` arguments also make these commands safe to copy into PowerShell.
+Quoted `-D` arguments work in PowerShell as well. Selenide/Selenium Manager resolves the browser driver.
+Each UI test closes its browser, including after failures.
 
-## Continuous integration
+Base URLs and browser settings are in [UiConfig](src/test/java/config/UiConfig.java)
+and [ApiConfig](src/test/java/config/ApiConfig.java). Override them with `-Dui.baseUrl=...`,
+`-Dapi.baseUrl=...`, or `-Dselenide.browser=edge`; alternative URLs must expose the same application contracts.
 
-The [QA Automation Tests workflow](.github/workflows/tests.yml) runs automatically on pull requests
-targeting `main` and pushes to `main`. It also supports manual runs from the GitHub Actions tab.
-It uses `ubuntu-latest`, Temurin Java 17, Maven dependency caching, and `mvn --batch-mode clean test`.
-Chrome runs headless using the existing test configuration. No repository secrets are required.
+## GitHub Actions CI
 
-The job has a 15-minute timeout; the test step has a 10-minute timeout to leave time for report uploads.
-On failure, open the run in GitHub's **Actions** tab and download **test-reports** from **Artifacts**.
-The artifact contains available Surefire reports, Allure results, and Selenide failure screenshots/page
-sources from `target/surefire-reports`, `target/allure-results`, and `target/selenide-reports`.
-Artifacts are retained for 7 days. Uploading reports does not turn a failed test run into a successful run.
+The [QA Automation Tests workflow](.github/workflows/tests.yml) runs on pushes to `main`,
+pull requests targeting `main`, and manual runs. It uses `ubuntu-latest`, Temurin Java 17,
+and Maven dependency caching to execute `mvn --batch-mode clean test`.
 
-## Configuration
+The test step has a 10-minute timeout within a 15-minute job. Failed runs remain failed after artifact upload.
+In the run's **Artifacts** section, download **test-reports** for the available Surefire reports,
+Allure results, and Selenide screenshots/page sources. Failure artifacts are retained for **7 days**.
+The suite uses public demo credentials and requires no repository secrets.
 
-| System property | Default | Purpose |
-| --- | --- | --- |
-| `ui.baseUrl` | `https://www.saucedemo.com` | UI application URL |
-| `api.baseUrl` | `https://restful-booker.herokuapp.com` | REST API URL |
-| `selenide.browser` | `chrome` | Browser name |
-| `selenide.headless` | `true` | Run without a visible browser window |
+## Development workflow
 
-Override a value using Maven, for example `mvn test "-Dgroups=api" "-Dapi.baseUrl=http://localhost:3001"`.
-Alternative URLs must serve applications with the same UI/API contract.
+Feature branch → Pull Request → GitHub Actions → review → merge to `main`.
+CI runs automated tests on pull requests before changes are reviewed and merged into `main`.
 
-`UiConfig` sets a 10-second element timeout and a 30-second page load timeout.
-`ApiConfig` sets a 10-second connection timeout and a 30-second socket timeout,
-JSON headers, Jackson mapping, and request/response logging when REST Assured validation fails.
-Tests run sequentially by default, and UI and API tests have no dependency on each other.
+## Allure reporting
 
-These tests exercise public demo services, so availability and network access affect results.
-Each API test creates its own booking and keeps the generated ID and any authentication token local to that test.
-There are no fixed booking IDs or dependencies between tests. The delete scenario removes its booking;
-the create, get, and update scenarios leave their demo records for the service's automatic reset.
-[Restful Booker resets its data every 10 minutes](https://restful-booker.herokuapp.com/).
-The SauceDemo credentials are public sample credentials displayed by the demo site.
-
-Update and delete obtain a token from `POST /auth` using Restful Booker's public demo credentials
-(`admin` / `password123`), then send it as a `token` cookie. The authentication response must be JSON
-with HTTP 200 and a non-blank token. Request and response attachments include this public demo data.
-
-Restful Booker's successful DELETE response is HTTP **201** with a plain-text `Created` body.
-The delete test also verifies the subsequent GET response: HTTP **404**, plain text, and `Not Found`.
-
-## Allure reports
-
-The Allure TestNG adapter automatically records the test lifecycle. `Allure.step(...)`
-adds readable steps without requiring an AspectJ agent. The Selenide listener attaches
-screenshots and page HTML for failed Selenide checks; the REST Assured filter attaches
-HTTP requests and responses.
-
-Run a clean suite and generate the report:
-
-```shell
-mvn clean test
-mvn allure:report
-```
-
-To generate and open the report in a local server:
+After a test run, including a failed run, generate and open the report:
 
 ```shell
 mvn allure:serve
 ```
 
-Stop the server with `Ctrl+C`. The Maven plugin downloads the pinned Allure 2 CLI on first use;
-no separate Allure or Node.js installation is required.
+Stop the server with `Ctrl+C`. To generate HTML without starting a server, run `mvn allure:report`.
+The Maven plugin downloads the configured Allure 2 CLI automatically; no separate Allure installation is needed.
 
-Generated artifacts (ignored by Git):
-
-- `target/surefire-reports/`: Maven/TestNG execution results.
-- `target/allure-results/`: raw Allure results and attachments.
-- `target/site/allure-maven-plugin/`: generated HTML report.
-- `target/selenide-reports/`: UI failure screenshots and page sources.
-- `.allure/`: downloaded Allure CLI.
-
-Use `mvn clean test` when you want reports containing only the latest run.
-
-## Project structure
-
-```text
-.
-|-- pom.xml
-|-- .gitignore
-|-- README.md
-|-- .github/
-|   `-- workflows/
-|       `-- tests.yml
-`-- src/test/
-    |-- java/
-    |   |-- ui/
-    |   |   `-- SauceDemoSmokeTest.java
-    |   |-- api/
-    |   |   |-- client/
-    |   |   |   |-- BookingApiClient.java
-    |   |   |   `-- AuthApiClient.java
-    |   |   `-- RestfulBookerSmokeTest.java
-    |   |-- pages/
-    |   |   |-- LoginPage.java
-    |   |   |-- InventoryPage.java
-    |   |   |-- CartPage.java
-    |   |   |-- CheckoutPage.java
-    |   |   |-- CheckoutOverviewPage.java
-    |   |   `-- CheckoutCompletePage.java
-    |   |-- models/
-    |   |   |-- AuthRequest.java
-    |   |   |-- AuthResponse.java
-    |   |   |-- Booking.java
-    |   |   |-- BookingDates.java
-    |   |   `-- BookingResponse.java
-    |   |-- config/
-    |   |   |-- UiConfig.java
-    |   |   `-- ApiConfig.java
-    |   `-- utils/
-    |       `-- TestData.java
-    `-- resources/
-        `-- allure.properties
-```
-
-| File | Responsibility |
+| Output | Location |
 | --- | --- |
-| `pom.xml` | Java 17 compilation, dependencies, Lombok annotation processing, Surefire test runner, and Allure report plugin |
-| `.gitignore` | Excludes build output, reports, IDE files, and local environment files |
-| `.github/workflows/tests.yml` | Runs the test suite in GitHub Actions and uploads reports after failures |
-| `SauceDemoSmokeTest.java` | Four independent UI scenarios, shared flow helpers, and browser setup/teardown |
-| `RestfulBookerSmokeTest.java` | Four independent CRUD scenarios, response assertions, and readable Allure steps |
-| `BookingApiClient.java` | Executes create, get, update, and delete requests and returns REST Assured responses |
-| `AuthApiClient.java` | Calls the auth endpoint to obtain a token |
-| `LoginPage.java` | Login form interactions and error assertions |
-| `InventoryPage.java` | Inventory assertions, product selection, cart badge checks, and cart navigation |
-| `CartPage.java` | Selected product and quantity assertions, plus navigation to checkout |
-| `CheckoutPage.java` | Customer information form and navigation to the overview |
-| `CheckoutOverviewPage.java` | Order contents and the Finish action |
-| `CheckoutCompletePage.java` | Successful order confirmation |
-| `Booking.java` | Booking request and returned booking details |
-| `BookingDates.java` | Check-in/check-out dates in the API's ISO date format |
-| `BookingResponse.java` | Creation response containing the generated ID and booking |
-| `AuthRequest.java` | Authentication username and password |
-| `AuthResponse.java` | Authentication token returned by the API |
-| `UiConfig.java` | Selenide settings and Allure UI listener |
-| `ApiConfig.java` | Fresh REST Assured request specification with JSON mapping and reporting |
-| `TestData.java` | Creates fresh original and updated booking data with future dates |
-| `allure.properties` | Stores Allure results under Maven's `target` directory |
+| Maven/TestNG results | `target/surefire-reports/` |
+| Raw Allure results and HTTP attachments | `target/allure-results/` |
+| Generated Allure HTML report | `target/site/allure-maven-plugin/` |
+| Selenide failure screenshots and page sources | `target/selenide-reports/` |
 
-The design uses small page objects and API clients. Add a new `*Test.java`
-class in `ui` or `api` to extend the suite; Maven discovers it automatically.
+Reports include readable steps, API request/response attachments, and screenshots/page sources for failed Selenide checks.
+Generated output is ignored by Git. Use `mvn clean test` to start with fresh results.
 
-API clients own request execution and reuse `ApiConfig` for a fresh request specification on every call.
-They return raw REST Assured responses so tests can validate both successful and unsuccessful responses.
-Tests own the scenarios, JSON-to-model mapping, and assertions. Lombok-generated equality compares all
-booking fields, including nested dates; the update fixture changes every field to catch partial updates.
-The clients do not cache IDs, tokens, or mutable request specifications, and need no abstract base class.
+## Scope
 
-UI selectors stay inside page objects and use SauceDemo's `data-test` attributes.
-Page methods describe actions or assertions; navigation methods return the next page object.
-Selenide assertions wait automatically, so no fixed sleeps are needed.
-Small private helpers in the UI test class reuse login and cart navigation, while every test
-prepares its own state. There are no test dependencies, base page classes, or shared browser sessions.
-
-## References
-
-- [SauceDemo](https://www.saucedemo.com/)
-- [Restful Booker API documentation](https://restful-booker.herokuapp.com/apidoc/index.html)
-- [Selenide quick start](https://selenide.org/quick-start.html)
-- [REST Assured](https://rest-assured.io/)
-- [Allure TestNG documentation](https://allurereport.org/docs/testng/)
-- [Allure Maven integration](https://allurereport.org/docs/integrations-maven/)
+This portfolio covers eight automated TestNG scenarios against public demo applications. Network availability and shared demo data
+can affect results. The delete test removes its booking; the other API tests leave their records for the demo service's reset.
